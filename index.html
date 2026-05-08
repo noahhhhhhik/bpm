@@ -3,120 +3,153 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BPM & BPS Counter</title>
+    <title>BPM Counter Pro</title>
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#0f172a">
+    <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        body { font-family: sans-serif; background: #121212; color: white; text-align: center; padding: 50px; }
-        .display { font-size: 4rem; margin: 20px; color: #00ffcc; }
-        .label { font-size: 1.2rem; color: #888; }
-        button { padding: 20px 40px; font-size: 1.5rem; cursor: pointer; background: #007bff; color: white; border: none; border-radius: 10px; margin: 10px; }
-        button:active { background: #0056b3; transform: scale(0.98); }
-        .audio-box { border: 2px dashed #444; padding: 20px; margin-top: 40px; border-radius: 15px; }
-        #visualizer { width: 100%; height: 50px; background: #222; margin-top: 10px; }
+        body { background-color: #0f172a; touch-action: manipulation; }
+        .active-glow { box-shadow: 0 0 20px rgba(14, 165, 233, 0.5); }
+        .beat-flash { animation: flash 0.15s ease-out; }
+        @keyframes flash { 0% { background-color: #1e293b; } 50% { background-color: #334155; } 100% { background-color: #1e293b; } }
     </style>
 </head>
-<body>
+<body class="text-white flex items-center justify-center min-h-screen p-4">
 
-    <h1>BPM Counter</h1>
-    
-    <div class="label">Beats Per Minute</div>
-    <div id="bpm-display" class="display">0</div>
-    
-    <div class="label">Beats Per Second (BPS)</div>
-    <div id="bps-display" style="font-size: 2rem; color: #00ffcc;">0.0</div>
+    <div id="main-card" class="max-w-md w-full p-8 bg-slate-800 rounded-[2.5rem] shadow-2xl border border-slate-700 text-center transition-all">
+        <h1 class="text-xs font-black tracking-[0.3em] text-slate-500 mb-8 uppercase">BPM & BPS Monitor</h1>
+        
+        <div class="grid grid-cols-2 gap-4 mb-10">
+            <div class="bg-slate-900/50 p-6 rounded-3xl">
+                <div id="bpm-display" class="text-5xl font-bold text-sky-400">0</div>
+                <div class="text-[10px] text-slate-500 uppercase mt-2 font-bold">BPM</div>
+            </div>
+            <div class="bg-slate-900/50 p-6 rounded-3xl">
+                <div id="bps-display" class="text-5xl font-bold text-amber-400">0.0</div>
+                <div class="text-[10px] text-slate-500 uppercase mt-2 font-bold">BPS</div>
+            </div>
+        </div>
 
-    <button id="tap-btn">HIER TIPPEN</button>
-    <button id="reset-btn" style="background: #666;">Reset</button>
+        <button id="tap-btn" class="w-full py-16 bg-sky-500 text-slate-900 text-4xl font-black rounded-3xl shadow-lg transition-all active:scale-95 select-none mb-6">
+            TAP
+        </button>
 
-    <div class="audio-box">
-        <h3>Auto-Erkennung (Mikrofon)</h3>
-        <button id="start-audio" style="background: #28a745;">Mikrofon starten</button>
-        <div id="visualizer"></div>
-        <p id="audio-status">Warte auf Audio...</p>
+        <div class="flex gap-2">
+            <button id="mic-toggle" class="flex-1 py-4 bg-slate-700 text-white font-bold rounded-2xl transition-all hover:bg-slate-600 flex items-center justify-center gap-2">
+                <span id="mic-icon">🎤</span> <span id="mic-text">Mikro starten</span>
+            </button>
+            <button id="reset-btn" class="px-6 py-4 bg-slate-900 text-slate-400 rounded-2xl hover:text-white transition-all">
+                ↺
+            </button>
+        </div>
+        
+        <p id="status" class="mt-4 text-xs text-slate-500 italic">Bereit zum Messen</p>
     </div>
 
     <script>
-        // Variablen für Manuelles Tapping
         let taps = [];
+        let audioCtx = null;
+        let stream = null;
+        let analyser = null;
+        let isMicRunning = false;
+        let animationId = null;
+
         const bpmDisplay = document.getElementById('bpm-display');
         const bpsDisplay = document.getElementById('bps-display');
+        const tapBtn = document.getElementById('tap-btn');
+        const micToggle = document.getElementById('mic-toggle');
+        const micText = document.getElementById('mic-text');
+        const status = document.getElementById('status');
+        const mainCard = document.getElementById('main-card');
 
-        document.getElementById('tap-btn').addEventListener('click', () => {
+        // BPM Logik
+        function processTap() {
             const now = Date.now();
+            if (taps.length > 0 && now - taps[taps.length - 1] > 2500) taps = [];
             taps.push(now);
-            
-            if (taps.length > 1) {
-                if (taps.length > 10) taps.shift(); // Nur die letzten 10 Taps nutzen
-                
-                let intervals = [];
-                for (let i = 1; i < taps.length; i++) {
-                    intervals.push(taps[i] - taps[i-1]);
-                }
-                
-                const avgInterval = intervals.reduce((a, b) => a + b) / intervals.length;
-                const bpm = Math.round(60000 / avgInterval);
-                const bps = (1000 / avgInterval).toFixed(2);
-                
-                bpmDisplay.innerText = bpm;
-                bpsDisplay.innerText = bps;
-            }
-        });
+            if (taps.length > 20) taps.shift();
 
+            if (taps.length > 1) {
+                const avgInterval = (taps[taps.length - 1] - taps[0]) / (taps.length - 1);
+                bpmDisplay.innerText = Math.round(60000 / avgInterval);
+                bpsDisplay.innerText = (1000 / avgInterval).toFixed(1);
+            }
+            
+            mainCard.classList.add('beat-flash');
+            setTimeout(() => mainCard.classList.remove('beat-flash'), 150);
+        }
+
+        // Mikrofon Steuerung
+        async function toggleMic() {
+            if (isMicRunning) {
+                stopMic();
+            } else {
+                startMic();
+            }
+        }
+
+        async function startMic() {
+            try {
+                stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                analyser = audioCtx.createAnalyser();
+                const source = audioCtx.createMediaStreamSource(stream);
+                source.connect(analyser);
+                analyser.fftSize = 256;
+
+                const dataArray = new Uint8Array(analyser.frequencyBinCount);
+                let lastBeatTime = 0;
+                isMicRunning = true;
+                
+                micToggle.classList.replace('bg-slate-700', 'bg-red-500/20');
+                micToggle.classList.add('text-red-500', 'border', 'border-red-500/50');
+                micText.innerText = "Stoppen";
+                status.innerText = "Mikrofon hört zu...";
+
+                function detect() {
+                    if (!isMicRunning) return;
+                    analyser.getByteFrequencyData(dataArray);
+                    let bass = dataArray[1] + dataArray[2] + dataArray[3];
+                    if (bass > 210) { // Schwellenwert für Beats
+                        const now = Date.now();
+                        if (now - lastBeatTime > 250) { 
+                            processTap();
+                            lastBeatTime = now;
+                        }
+                    }
+                    animationId = requestAnimationFrame(detect);
+                }
+                detect();
+            } catch (err) {
+                alert("Mikrofon-Zugriff verweigert.");
+            }
+        }
+
+        function stopMic() {
+            isMicRunning = false;
+            cancelAnimationFrame(animationId);
+            if (stream) stream.getTracks().forEach(track => track.stop());
+            if (audioCtx) audioCtx.close();
+            
+            micToggle.classList.replace('bg-red-500/20', 'bg-slate-700');
+            micToggle.classList.remove('text-red-500', 'border', 'border-red-500/50');
+            micText.innerText = "Mikro starten";
+            status.innerText = "Mikrofon beendet";
+        }
+
+        tapBtn.addEventListener('mousedown', (e) => { e.preventDefault(); processTap(); });
+        micToggle.addEventListener('click', toggleMic);
         document.getElementById('reset-btn').addEventListener('click', () => {
             taps = [];
             bpmDisplay.innerText = "0";
             bpsDisplay.innerText = "0.0";
+            status.innerText = "Reset durchgeführt";
         });
 
-        // --- Audio Analyse (Beat Detection) ---
-        let audioCtx, analyser, source;
-        const startAudioBtn = document.getElementById('start-audio');
-
-        startAudioBtn.addEventListener('click', async () => {
-            if (audioCtx) return;
-            
-            try {
-                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-                analyser = audioCtx.createAnalyser();
-                source = audioCtx.createMediaStreamSource(stream);
-                source.connect(analyser);
-                
-                analyser.fftSize = 256;
-                const bufferLength = analyser.frequencyBinCount;
-                const dataArray = new Uint8Array(bufferLength);
-                
-                let lastBeat = 0;
-                const threshold = 180; // Empfindlichkeit für laute Impulse
-
-                function detect() {
-                    analyser.getByteFrequencyData(dataArray);
-                    
-                    // Wir schauen uns die tiefen Frequenzen (Bass) an
-                    let volume = dataArray[1] + dataArray[2] + dataArray[3]; 
-                    let avgVolume = volume / 3;
-
-                    if (avgVolume > threshold) {
-                        const now = Date.now();
-                        if (now - lastBeat > 250) { // Mindestabstand zwischen Beats (max 240 BPM)
-                            document.getElementById('tap-btn').click(); // Simuliere Tap
-                            lastBeat = now;
-                            document.body.style.backgroundColor = "#1a3a3a";
-                            setTimeout(() => document.body.style.backgroundColor = "#121212", 100);
-                        }
-                    }
-                    requestAnimationFrame(detect);
-                }
-                
-                detect();
-                startAudioBtn.innerText = "Mikrofon aktiv";
-                startAudioBtn.disabled = true;
-                document.getElementById('audio-status').innerText = "Höre zu... Klatsche oder spiele Musik!";
-                
-            } catch (err) {
-                console.error("Mikrofon-Fehler:", err);
-                alert("Mikrofon wurde abgelehnt oder nicht gefunden.");
-            }
-        });
+        // Service Worker Registrierung für PWA
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/sw.js');
+        }
     </script>
 </body>
 </html>
