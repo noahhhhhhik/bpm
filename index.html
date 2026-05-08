@@ -3,12 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>BPM Studio Ultimate</title>
-    
-    <link rel="manifest" href="/manifest.json">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="theme-color" content="#0f172a">
-    
+    <title>BPM Studio Precision</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body { background-color: #0f172a; color: white; font-family: sans-serif; overflow-x: hidden; -webkit-tap-highlight-color: transparent; }
@@ -16,127 +11,120 @@
         .tab-content.active { display: block; }
         .active-tab { border-bottom: 3px solid #0ea5e9; color: #0ea5e9; }
         .glass { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1); }
-        .bpm-value { text-shadow: 0 0 25px rgba(14, 165, 233, 0.8); }
+        .bpm-glow { text-shadow: 0 0 20px rgba(14, 165, 233, 0.7); }
+        .flash { transition: all 0.1s; }
+        .flash-active { background-color: #38bdf8 !important; transform: scale(1.5); box-shadow: 0 0 15px #38bdf8; }
         input[type=range] { accent-color: #0ea5e9; }
     </style>
 </head>
 <body class="p-4 pb-32 select-none">
 
     <div class="max-w-xl mx-auto">
-        <!-- Header -->
         <header class="flex justify-between items-center mb-8 pt-6">
             <div>
-                <h1 class="text-xl font-black italic tracking-tighter uppercase">BPM<span class="text-sky-500">STUDIO</span></h1>
-                <p id="status-text" class="text-[9px] text-slate-500 font-bold uppercase tracking-widest">90Hz Filter Aktiv</p>
+                <h1 class="text-xl font-black italic tracking-tighter uppercase">BPM<span class="text-sky-500">PRECISION</span></h1>
+                <p id="status-text" class="text-[9px] text-slate-500 font-bold uppercase tracking-widest">Auto-Dynamic Filter</p>
             </div>
             <div class="text-right">
-                <div id="bpm-display" class="text-6xl font-mono font-black text-sky-400 bpm-value">0</div>
+                <div class="flex items-center gap-4 justify-end">
+                    <!-- Visueller Beat-Punkt -->
+                    <div id="beat-dot" class="w-4 h-4 rounded-full bg-slate-700 flash"></div>
+                    <div id="bpm-display" class="text-6xl font-mono font-black text-sky-400 bpm-glow">0</div>
+                </div>
                 <div class="flex gap-2 mt-2 justify-end">
-                    <button onclick="adjustBpm(0.5)" class="bg-slate-800 text-[10px] px-3 py-1 rounded border border-slate-700 hover:bg-slate-700">÷2</button>
-                    <button onclick="adjustBpm(2)" class="bg-slate-800 text-[10px] px-3 py-1 rounded border border-slate-700 hover:bg-slate-700">x2</button>
+                    <button onclick="adjustBpm(0.5)" class="bg-slate-800 text-[10px] px-3 py-1 rounded border border-slate-700">÷2</button>
+                    <button onclick="adjustBpm(2)" class="bg-slate-800 text-[10px] px-3 py-1 rounded border border-slate-700">x2</button>
                 </div>
             </div>
         </header>
 
-        <!-- Navigation -->
         <nav class="flex border-b border-slate-800 mb-8 text-[11px] font-bold uppercase tracking-widest">
-            <button onclick="openTab(event, 'tap')" class="tab-link active-tab flex-1 py-4 text-center">Tap/Mikro</button>
-            <button onclick="openTab(event, 'file')" class="tab-link flex-1 py-4 text-center">Dateien</button>
-            <button onclick="openTab(event, 'search')" class="tab-link flex-1 py-4 text-center">Suche</button>
+            <button onclick="openTab(event, 'tap')" class="tab-link active-tab flex-1 py-4">Tap & Live</button>
+            <button onclick="openTab(event, 'file')" class="tab-link flex-1 py-4">Dateien</button>
+            <button onclick="openTab(event, 'search')" class="tab-link flex-1 py-4">Suche</button>
         </nav>
 
-        <!-- TAB 1: TAP & LIVE MIKRO -->
         <div id="tap" class="tab-content active space-y-6">
-            <div class="text-center">
-                <button id="tap-btn" class="w-full py-20 glass rounded-[3rem] text-7xl font-black active:scale-95 transition-all border-2 border-slate-700/50 shadow-2xl">TAP</button>
-                <button onclick="resetBpm()" class="mt-6 text-slate-500 hover:text-sky-400 text-[10px] font-bold uppercase tracking-widest">✕ Zähler Reset</button>
-            </div>
+            <button id="tap-btn" class="w-full py-20 glass rounded-[3rem] text-7xl font-black active:scale-95 transition-all border-2 border-slate-700/50 shadow-2xl">TAP</button>
             
             <div class="glass p-6 rounded-[2rem] border border-slate-700">
                 <div class="flex justify-between items-center mb-6">
-                    <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Auto-Bass Erkennung</span>
+                    <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Bass-Erkennung</span>
                     <button id="mic-toggle" class="bg-sky-500 text-slate-900 px-6 py-2 rounded-full text-[10px] font-black uppercase">Mikro Start</button>
                 </div>
-                <input type="range" id="sensitivity" min="30" max="180" value="100" class="w-full h-2 bg-slate-900 rounded-lg appearance-none">
+                <input type="range" id="sensitivity" min="1.1" max="3.0" step="0.1" value="1.5" class="w-full h-2 bg-slate-900 rounded-lg appearance-none">
+                <div class="flex justify-between text-[9px] text-slate-600 mt-2 font-bold uppercase"><span>Empfindlich</span><span>Nur harter Bass</span></div>
             </div>
+            <button onclick="resetBpm()" class="w-full text-slate-500 text-[10px] font-bold uppercase tracking-widest">✕ Reset Zähler</button>
         </div>
 
-        <!-- TAB 2: DATEIEN -->
-        <div id="file" class="tab-content space-y-4">
-            <div class="glass p-12 rounded-[2rem] border-dashed border-2 border-slate-700 text-center relative">
+        <div id="file" class="tab-content space-y-4 text-center">
+            <div class="glass p-12 rounded-[2rem] border-dashed border-2 border-slate-700 relative">
                 <input type="file" id="file-input" accept="audio/*" class="absolute inset-0 opacity-0 cursor-pointer">
-                <div class="pointer-events-none">
-                    <div class="text-5xl mb-4">📂</div>
-                    <p class="font-bold text-slate-300">Lied hochladen</p>
-                    <p class="text-[10px] text-slate-500 uppercase mt-2">MP3, WAV, M4A</p>
-                </div>
+                <p class="font-bold text-slate-300">Lied hochladen & abspielen</p>
             </div>
             <div id="file-list" class="space-y-2"></div>
         </div>
 
-        <!-- TAB 3: SUCHE -->
         <div id="search" class="tab-content space-y-4">
             <div class="flex gap-2">
-                <input type="text" id="itunes-q" placeholder="Song oder Künstler..." class="flex-1 bg-slate-800 p-4 rounded-2xl focus:outline-none border border-slate-700 text-sm">
+                <input type="text" id="itunes-q" placeholder="Song suchen..." class="flex-1 bg-slate-800 p-4 rounded-2xl focus:outline-none border border-slate-700">
                 <button onclick="searchSongs()" class="bg-sky-500 text-slate-900 px-6 rounded-2xl font-black text-xs uppercase">Go</button>
             </div>
             <div id="itunes-results" class="space-y-2"></div>
         </div>
     </div>
 
-    <!-- PLAYER BAR -->
-    <div id="player-bar" class="fixed bottom-0 left-0 right-0 glass border-t border-slate-700 p-5 translate-y-full transition-transform duration-300 z-50 rounded-t-[2.5rem]">
+    <div id="player-bar" class="fixed bottom-0 left-0 right-0 glass border-t border-slate-700 p-5 translate-y-full transition-transform duration-300 z-50 rounded-t-[2rem]">
         <div class="max-w-xl mx-auto flex items-center gap-4">
-            <div id="player-art" class="w-14 h-14 bg-slate-900 rounded-2xl flex items-center justify-center text-2xl border border-slate-800">🎵</div>
+            <div id="player-art" class="w-12 h-12 bg-slate-900 rounded-xl flex items-center justify-center text-xl">🎵</div>
             <div class="flex-1 min-w-0">
-                <p id="player-title" class="font-bold text-sm truncate text-sky-400 italic">Titel</p>
-                <p id="player-sub" class="text-[10px] text-slate-500 uppercase font-black truncate">Künstler</p>
+                <p id="player-title" class="font-bold text-sm truncate">Titel</p>
+                <p id="player-sub" class="text-[10px] text-slate-500 truncate">Künstler</p>
             </div>
-            <button id="stop-btn" class="bg-red-500/10 text-red-500 px-6 py-4 rounded-2xl font-black text-[10px] border border-red-500/20 uppercase">STOP</button>
+            <button id="stop-btn" class="bg-red-500/20 text-red-500 px-6 py-3 rounded-xl font-black text-[10px]">STOP</button>
         </div>
     </div>
 
     <script>
         let taps = [];
-        let audioCtx = null;
-        let analyser = null;
-        let activeAudio = null;
-        let isMicRunning = false;
-        let micStream = null;
+        let audioCtx, analyser, activeAudio, isMicRunning, micStream;
+        let runningEnergy = 0; // Durchschnittliche Bass-Energie
 
         function openTab(evt, name) {
-            const contents = document.getElementsByClassName("tab-content");
-            for (let i = 0; i < contents.length; i++) contents[i].style.display = "none";
-            const links = document.getElementsByClassName("tab-link");
-            for (let i = 0; i < links.length; i++) links[i].classList.remove("active-tab");
-            document.getElementById(name).style.display = "block";
-            evt.currentTarget.classList.add("active-tab");
+            document.querySelectorAll('.tab-content').forEach(c => c.style.display = 'none');
+            document.querySelectorAll('.tab-link').forEach(l => l.classList.remove('active-tab'));
+            document.getElementById(name).style.display = 'block';
+            evt.currentTarget.classList.add('active-tab');
         }
 
-        function updateBpm(val) {
-            document.getElementById('bpm-display').innerText = Math.round(val);
-        }
-
-        function adjustBpm(factor) {
-            if (taps.length < 2) return;
-            const lastTime = taps[taps.length - 1];
-            const startTime = taps[0];
-            const duration = lastTime - startTime;
-            taps[0] = lastTime - (duration / factor);
-            updateBpm(document.getElementById('bpm-display').innerText * factor);
+        function triggerVisualBeat() {
+            const dot = document.getElementById('beat-dot');
+            dot.classList.add('flash-active');
+            setTimeout(() => dot.classList.remove('flash-active'), 50);
         }
 
         function processBeat() {
             const now = Date.now();
-            if (taps.length > 0 && now - taps[taps.length - 1] > 2200) taps = [];
+            if (taps.length > 0 && now - taps[taps.length-1] > 2500) taps = [];
             taps.push(now);
+            if (taps.length > 20) taps.shift();
             if (taps.length > 1) {
-                const avg = (taps[taps.length - 1] - taps[0]) / (taps.length - 1);
-                updateBpm(60000 / avg);
+                const avg = (taps[taps.length-1] - taps[0]) / (taps.length-1);
+                document.getElementById('bpm-display').innerText = Math.round(60000 / avg);
             }
+            triggerVisualBeat();
         }
 
-        function resetBpm() { taps = []; updateBpm(0); }
+        function adjustBpm(f) {
+            if (taps.length < 2) return;
+            const currentBpm = parseInt(document.getElementById('bpm-display').innerText);
+            document.getElementById('bpm-display').innerText = Math.round(currentBpm * f);
+            // Wir löschen die Taps, damit er mit dem neuen Wert sauber weiterrechnet
+            taps = [];
+        }
+
+        function resetBpm() { taps = []; document.getElementById('bpm-display').innerText = "0"; }
 
         async function initAudio() {
             if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -146,21 +134,27 @@
                 analyser.fftSize = 512;
                 const filter = audioCtx.createBiquadFilter();
                 filter.type = "lowpass";
-                filter.frequency.value = 90; // Präziser Bass-Filter
+                filter.frequency.value = 100; // Bass-Bereich
                 filter.connect(analyser);
-                
+
                 const data = new Uint8Array(analyser.frequencyBinCount);
                 let lastBeatTime = 0;
 
                 function loop() {
                     analyser.getByteFrequencyData(data);
-                    let volume = data[1] + data[2] + data[3];
-                    let threshold = parseInt(document.getElementById('sensitivity').value);
+                    // Energie in den untersten 4 Frequenz-Bändern (Bass)
+                    let currentEnergy = data[1] + data[2] + data[3] + data[4];
+                    
+                    // Durchschnittliche Energie langsam mitführen (Glättung)
+                    runningEnergy = runningEnergy * 0.95 + currentEnergy * 0.05;
 
-                    if (volume > threshold) {
+                    let sensitivity = parseFloat(document.getElementById('sensitivity').value);
+                    
+                    // Beat erkannt, wenn aktuelle Energie deutlich über dem Durchschnitt liegt
+                    if (currentEnergy > runningEnergy * sensitivity && currentEnergy > 30) {
                         const now = Date.now();
-                        // Sperre gegen Doppel-Zählen (300ms)
-                        if (now - lastBeatTime > 300) { 
+                        // Dynamische Sperre (bei 120 BPM ca. 500ms Abstand, wir sperren 350ms)
+                        if (now - lastBeatTime > 350) { 
                             processBeat();
                             lastBeatTime = now;
                         }
@@ -174,46 +168,39 @@
         function playTrack(url, title, artist, img = null) {
             initAudio().then(() => {
                 if (activeAudio) activeAudio.pause();
-                activeAudio = new Audio();
+                activeAudio = new Audio(url);
                 activeAudio.crossOrigin = "anonymous";
-                activeAudio.src = url;
                 const source = audioCtx.createMediaElementSource(activeAudio);
                 source.connect(analyser);
                 source.connect(audioCtx.destination);
                 activeAudio.play();
-                
                 document.getElementById('player-title').innerText = title;
                 document.getElementById('player-sub').innerText = artist;
-                if(img) document.getElementById('player-art').innerHTML = `<img src="${img}" class="w-full h-full object-cover rounded-2xl">`;
-                else document.getElementById('player-art').innerText = "🎵";
+                if(img) document.getElementById('player-art').innerHTML = `<img src="${img}" class="w-full h-full object-cover rounded-xl">`;
                 document.getElementById('player-bar').classList.remove('translate-y-full');
             });
         }
 
         async function searchSongs() {
             const q = document.getElementById('itunes-q').value;
-            if(!q) return;
-            const res = await fetch(`https://itunes.apple.com/search?term=${encodeURIComponent(q)}&entity=song&limit=15`);
+            const res = await fetch(`https://itunes.apple.com/search?term=${encodeURIComponent(q)}&entity=song&limit=10`);
             const data = await res.json();
             const container = document.getElementById('itunes-results');
             container.innerHTML = "";
             data.results.forEach(song => {
                 const div = document.createElement('div');
-                div.className = "glass p-4 rounded-2xl flex items-center gap-4 cursor-pointer active:bg-slate-800";
-                div.onclick = () => { playTrack(song.previewUrl, song.trackName, song.artistName, song.artworkUrl100); };
-                div.innerHTML = `<img src="${song.artworkUrl60}" class="w-10 h-10 rounded-lg"><div class="flex-1 truncate text-xs font-bold"><p class="truncate">${song.trackName}</p><p class="text-slate-500 uppercase">${song.artistName}</p></div><div class="text-sky-500 font-bold">▶</div>`;
+                div.className = "glass p-4 rounded-2xl flex items-center gap-4 cursor-pointer";
+                div.onclick = () => playTrack(song.previewUrl, song.trackName, song.artistName, song.artworkUrl100);
+                div.innerHTML = `<img src="${song.artworkUrl60}" class="w-10 h-10 rounded-lg"><div class="flex-1 truncate text-xs"><b>${song.trackName}</b><br>${song.artistName}</div><div class="text-sky-500">▶</div>`;
                 container.appendChild(div);
             });
         }
 
-        // DATEI HANDLER
         document.getElementById('file-input').addEventListener('change', (e) => {
             const file = e.target.files[0];
-            if(!file) return;
             const url = URL.createObjectURL(file);
-            const container = document.getElementById('file-list');
-            
             const div = document.createElement('div');
-            div.className = "glass p-4 rounded-2xl flex justify-between items-center border border-slate-800";
-            div.innerHTML = `<div class="truncate font-bold text-xs flex-1 pr-4">${file.name}</div><button class="bg-sky-500 text-slate-900 px-4 py-2 rounded-xl font-black text-[10px] uppercase">Play</button>`;
-            div.onclick = () => { playTrack(url, file.name, "Eigene Datei");
+            div.className = "glass p-4 rounded-2xl flex justify-between items-center";
+            div.innerHTML = `<span class="text-xs truncate">${file.name}</span><button class="bg-sky-500 text-black px-4 py-1 rounded-lg text-xs font-bold">PLAY</button>`;
+            div.onclick = () => playTrack(url, file.name, "Datei");
+            document.getElementById('file-
