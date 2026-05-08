@@ -1,6 +1,3 @@
 {
-  "version": 2,
-  "name": "bpm-bps-counter",
-  "cleanUrls": true,
-  "framework": null
+  "cleanUrls": true
 }
