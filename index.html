@@ -2,196 +2,243 @@
 <html lang="de">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BPM Studio Pro + Spotify</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>BPM Counter Pro</title>
+    
     <link rel="manifest" href="/manifest.json">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="theme-color" content="#0f172a">
+    
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        body { background-color: #0f172a; color: white; font-family: 'Inter', sans-serif; }
+        body { background-color: #0f172a; color: white; font-family: sans-serif; overflow-x: hidden; -webkit-tap-highlight-color: transparent; }
         .tab-content { display: none; }
         .tab-content.active { display: block; }
-        .active-tab { border-bottom: 3px solid #1db954; color: #1db954; } /* Spotify Green */
+        .active-tab { border-bottom: 3px solid #0ea5e9; color: #0ea5e9; }
         .glass { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1); }
-        .spotify-btn { background-color: #1db954; color: black; font-weight: bold; border-radius: 9999px; transition: 0.3s; }
-        .spotify-btn:hover { background-color: #1ed760; transform: scale(1.05); }
+        input[type=range] { accent-color: #0ea5e9; }
+        .bpm-glow { text-shadow: 0 0 15px rgba(14, 165, 233, 0.7); }
     </style>
 </head>
-<body class="p-4 pb-20">
+<body class="p-4 pb-32 select-none">
 
-    <div class="max-w-2xl mx-auto">
-        <!-- Header -->
-        <header class="flex justify-between items-center mb-6 pt-4">
-            <h1 class="text-xl font-black italic">BPM<span class="text-emerald-500">STUDIO</span></h1>
-            <div id="bpm-master" class="text-4xl font-mono font-bold text-emerald-400">0</div>
+    <div class="max-w-xl mx-auto">
+        <!-- Top Bar -->
+        <header class="flex justify-between items-end mb-8 pt-6">
+            <div>
+                <h1 class="text-2xl font-black italic tracking-tighter uppercase">BPM<span class="text-sky-500">PRO</span></h1>
+                <p id="status-text" class="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Bereit</p>
+            </div>
+            <div id="bpm-display" class="text-6xl font-mono font-black text-sky-400 bpm-glow">0</div>
         </header>
 
-        <!-- Navigation -->
-        <nav class="flex border-b border-slate-800 mb-8 overflow-x-auto text-[10px] uppercase tracking-tighter">
-            <button onclick="openTab('tap')" class="tab-link active-tab px-4 py-3 font-bold">Tap/Mic</button>
-            <button onclick="openTab('file')" class="tab-link px-4 py-3 font-bold">Datei</button>
-            <button onclick="openTab('itunes')" class="tab-link px-4 py-3 font-bold">iTunes</button>
-            <button onclick="openTab('spotify')" class="tab-link px-4 py-3 font-bold">Spotify</button>
+        <!-- Tabs Navigation -->
+        <nav class="flex border-b border-slate-800 mb-8 text-[11px] font-bold uppercase">
+            <button onclick="openTab(event, 'tap')" class="tab-link active-tab flex-1 py-4">Tap & Live</button>
+            <button onclick="openTab(event, 'file')" class="tab-link flex-1 py-4">Dateien</button>
+            <button onclick="openTab(event, 'search')" class="tab-link flex-1 py-4">Suche</button>
         </nav>
 
         <!-- TAB 1: TAP & MIC -->
         <div id="tap" class="tab-content active space-y-6">
-            <button id="tap-btn" class="w-full py-20 glass rounded-3xl text-6xl font-black active:scale-95 transition-all">TAP</button>
-            <div class="glass p-6 rounded-3xl">
-                <div class="flex justify-between items-center mb-4 text-xs font-bold text-slate-400">
-                    <span>BASS-ERKENNUNG</span>
-                    <button id="mic-toggle" class="bg-emerald-500 px-4 py-1 rounded-full text-slate-900">START</button>
+            <div class="text-center">
+                <button id="tap-btn" class="w-full py-20 glass rounded-[3rem] text-7xl font-black active:scale-95 transition-all border-2 border-slate-700/50">TAP</button>
+                <button onclick="resetBpm()" class="mt-6 text-slate-500 hover:text-sky-400 text-[10px] font-bold uppercase tracking-widest">✕ Zähler Reset</button>
+            </div>
+            
+            <div class="glass p-6 rounded-[2rem] border border-slate-700">
+                <div class="flex justify-between items-center mb-6">
+                    <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Auto-Bass Erkennung</span>
+                    <button id="mic-toggle" class="bg-sky-500 text-slate-900 px-6 py-2 rounded-full text-[10px] font-black uppercase">Mikro Start</button>
                 </div>
-                <input type="range" id="sensitivity" min="100" max="255" value="200" class="w-full accent-emerald-500">
+                <input type="range" id="sensitivity" min="10" max="100" value="60" class="w-full h-2 bg-slate-900 rounded-lg appearance-none">
             </div>
         </div>
 
-        <!-- TAB 2: FILE -->
-        <div id="file" class="tab-content">
-            <div class="glass p-10 rounded-3xl border-dashed border-2 border-slate-600 text-center">
+        <!-- TAB 2: FILES -->
+        <div id="file" class="tab-content space-y-4">
+            <div class="glass p-10 rounded-[2rem] border-dashed border-2 border-slate-700 text-center">
                 <input type="file" id="file-input" accept="audio/*" class="hidden">
                 <label for="file-input" class="cursor-pointer block">
-                    <span class="text-4xl mb-4 block">📂</span>
-                    <p class="font-bold">Musikdatei analysieren</p>
+                    <div class="text-4xl mb-4">📂</div>
+                    <p class="font-bold text-sm text-slate-300">Musikdatei laden</p>
                 </label>
             </div>
-            <div id="file-status" class="mt-4 text-center text-emerald-400 font-mono text-sm"></div>
+            <div id="file-list" class="space-y-2"></div>
         </div>
 
-        <!-- TAB 3: ITUNES -->
-        <div id="itunes" class="tab-content space-y-4">
+        <!-- TAB 3: SEARCH -->
+        <div id="search" class="tab-content space-y-4">
             <div class="flex gap-2">
-                <input type="text" id="itunes-query" placeholder="iTunes Suche..." class="flex-1 bg-slate-800 p-4 rounded-2xl focus:outline-none border border-slate-700">
-                <button onclick="searchITunes()" class="bg-slate-700 px-6 rounded-2xl">Go</button>
+                <input type="text" id="itunes-q" placeholder="Song suchen..." class="flex-1 bg-slate-800 p-4 rounded-2xl focus:outline-none border border-slate-700 text-sm">
+                <button id="itunes-search-btn" class="bg-sky-500 text-slate-900 px-6 rounded-2xl font-black text-xs uppercase">Go</button>
             </div>
             <div id="itunes-results" class="space-y-2"></div>
         </div>
+    </div>
 
-        <!-- TAB 4: SPOTIFY -->
-        <div id="spotify" class="tab-content space-y-4 text-center">
-            <div id="spotify-login-section">
-                <p class="text-sm text-slate-400 mb-4">Um Spotify zu nutzen, musst du dich einmalig verbinden.</p>
-                <button onclick="loginSpotify()" class="spotify-btn px-8 py-3">Mit Spotify verbinden</button>
+    <!-- PLAYER BAR -->
+    <div id="player-bar" class="fixed bottom-0 left-0 right-0 glass border-t border-slate-700 p-5 translate-y-full transition-transform duration-300 z-50 rounded-t-[2rem]">
+        <div class="max-w-xl mx-auto flex items-center gap-4">
+            <div id="player-art" class="w-12 h-12 bg-slate-900 rounded-xl flex items-center justify-center text-xl">🎵</div>
+            <div class="flex-1 min-w-0">
+                <p id="player-title" class="font-bold text-sm truncate">Titel</p>
+                <p id="player-sub" class="text-[10px] text-slate-500 uppercase font-bold truncate">Künstler</p>
             </div>
-            <div id="spotify-search-section" class="hidden space-y-4">
-                <div class="flex gap-2 text-left">
-                    <input type="text" id="spotify-query" placeholder="Spotify Song-Suche..." class="flex-1 bg-slate-800 p-4 rounded-2xl focus:outline-none border border-slate-700">
-                    <button onclick="searchSpotify()" class="spotify-btn px-6 py-2 text-sm text-slate-900">Go</button>
-                </div>
-                <div id="spotify-results" class="space-y-2 text-left"></div>
-            </div>
+            <button id="stop-btn" class="bg-red-500/20 text-red-500 px-6 py-3 rounded-xl font-black text-[10px] uppercase">STOP</button>
         </div>
-
-        <button onclick="resetBpm()" class="w-full mt-10 text-[10px] text-slate-600 uppercase tracking-widest">Reset Master BPM</button>
     </div>
 
     <script>
-        // --- KONFIGURATION ---
-        const CLIENT_ID = 'DEINE_SPOTIFY_CLIENT_ID'; // <--- HIER DEINE ID EINTRAGEN
-        const REDIRECT_URI = window.location.origin + '/'; 
-
         let taps = [];
-        let globalBpm = 0;
-        let spotifyToken = null;
+        let audioCtx = null;
+        let analyser = null;
+        let activeAudio = null;
+        let isMicRunning = false;
+        let micStream = null;
 
-        // AUTH CHECK (Prüfen ob Token in URL nach Login)
-        window.onload = () => {
-            const hash = window.location.hash.substring(1).split('&').reduce((initial, item) => {
-                if (item) { var parts = item.split('='); initial[parts[0]] = decodeURIComponent(parts[1]); }
-                return initial;
-            }, {});
-            if (hash.access_token) {
-                spotifyToken = hash.access_token;
-                window.location.hash = ""; // Clean URL
-                showSpotifySearch();
-            }
-        };
-
-        function openTab(name) {
-            document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
-            document.querySelectorAll('.tab-link').forEach(l => l.classList.remove('active-tab'));
-            document.getElementById(name).classList.add('active');
-            event.currentTarget.classList.add('active-tab');
+        // TABS FIX: Event korrekt übergeben
+        function openTab(evt, name) {
+            const contents = document.getElementsByClassName("tab-content");
+            for (let i = 0; i < contents.length; i++) contents[i].style.display = "none";
+            
+            const links = document.getElementsByClassName("tab-link");
+            for (let i = 0; i < links.length; i++) links[i].classList.remove("active-tab");
+            
+            document.getElementById(name).style.display = "block";
+            evt.currentTarget.classList.add("active-tab");
         }
 
-        // BPM LOGIC
-        function updateBpm(val) {
-            globalBpm = val;
-            document.getElementById('bpm-master').innerText = Math.round(val);
-        }
-
-        function handleTap() {
+        // BPM RECHNUNG
+        function processBeat() {
             const now = Date.now();
-            if (taps.length > 0 && now - taps[taps.length-1] > 2000) taps = [];
+            if (taps.length > 0 && now - taps[taps.length-1] > 2200) taps = [];
             taps.push(now);
             if (taps.length > 1) {
                 const avg = (taps[taps.length-1] - taps[0]) / (taps.length-1);
-                updateBpm(60000 / avg);
+                document.getElementById('bpm-display').innerText = Math.round(60000 / avg);
             }
         }
-        document.getElementById('tap-btn').addEventListener('mousedown', (e) => { e.preventDefault(); handleTap(); });
 
-        // SPOTIFY LOGIC
-        function loginSpotify() {
-            const scope = 'user-read-private user-read-email';
-            const url = `https://accounts.spotify.com/authorize?client_id=${CLIENT_ID}&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&scope=${encodeURIComponent(scope)}&response_type=token&show_dialog=true`;
-            window.location.href = url;
+        function resetBpm() {
+            taps = [];
+            document.getElementById('bpm-display').innerText = "0";
         }
 
-        function showSpotifySearch() {
-            document.getElementById('spotify-login-section').classList.add('hidden');
-            document.getElementById('spotify-search-section').classList.remove('hidden');
+        // AUDIO ENGINE
+        async function initAudio() {
+            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            if (audioCtx.state === 'suspended') await audioCtx.resume();
+            
+            if (!analyser) {
+                analyser = audioCtx.createAnalyser();
+                analyser.fftSize = 256;
+                const filter = audioCtx.createBiquadFilter();
+                filter.type = "lowpass";
+                filter.frequency.value = 150; 
+                filter.connect(analyser);
+                
+                const data = new Uint8Array(analyser.frequencyBinCount);
+                let lastBeat = 0;
+
+                function loop() {
+                    analyser.getByteFrequencyData(data);
+                    let volume = data[1] + data[2] + data[3];
+                    let sens = document.getElementById('sensitivity').value;
+                    let threshold = 255 - (sens * 2);
+
+                    if (volume > threshold) {
+                        const now = Date.now();
+                        if (now - lastBeat > 280) { 
+                            processBeat();
+                            lastBeat = now;
+                        }
+                    }
+                    requestAnimationFrame(loop);
+                }
+                loop();
+            }
         }
 
-        async function searchSpotify() {
-            const q = document.getElementById('spotify-query').value;
-            const res = await fetch(`https://api.spotify.com/v1/search?q=${encodeURIComponent(q)}&type=track&limit=10`, {
-                headers: { 'Authorization': 'Bearer ' + spotifyToken }
+        // PLAY & STOP
+        function playTrack(url, title, artist, img = null) {
+            initAudio().then(() => {
+                if (activeAudio) activeAudio.pause();
+                activeAudio = new Audio();
+                activeAudio.crossOrigin = "anonymous";
+                activeAudio.src = url;
+
+                const source = audioCtx.createMediaElementSource(activeAudio);
+                source.connect(analyser);
+                source.connect(audioCtx.destination);
+
+                activeAudio.play();
+                
+                document.getElementById('player-title').innerText = title;
+                document.getElementById('player-sub').innerText = artist;
+                if(img) document.getElementById('player-art').innerHTML = `<img src="${img}" class="w-full h-full object-cover rounded-xl">`;
+                document.getElementById('player-bar').classList.remove('translate-y-full');
             });
-            const data = await res.json();
-            renderResults('spotify-results', data.tracks.items, 'spotify');
         }
 
-        // ITUNES LOGIC
-        async function searchITunes() {
-            const q = document.getElementById('itunes-query').value;
-            const res = await fetch(`https://itunes.apple.com/search?term=${encodeURIComponent(q)}&entity=song&limit=10`);
-            const data = await res.json();
-            renderResults('itunes-results', data.results, 'itunes');
+        function stopCurrent() {
+            if (activeAudio) activeAudio.pause();
+            if (isMicRunning) stopMic();
+            document.getElementById('player-bar').classList.add('translate-y-full');
         }
 
-        function renderResults(targetId, tracks, type) {
-            const container = document.getElementById(targetId);
+        // SUCHE
+        async function searchSongs() {
+            const q = document.getElementById('itunes-q').value;
+            if(!q) return;
+            const res = await fetch(`https://itunes.apple.com/search?term=${encodeURIComponent(q)}&entity=song&limit=15`);
+            const data = await res.json();
+            const container = document.getElementById('itunes-results');
             container.innerHTML = "";
-            tracks.forEach(t => {
-                const name = t.name || t.trackName;
-                const artist = (t.artists ? t.artists[0].name : t.artistName);
-                const img = (t.album ? t.album.images[2].url : t.artworkUrl60);
-                const preview = t.preview_url || t.previewUrl;
-
+            
+            data.results.forEach(song => {
                 const div = document.createElement('div');
-                div.className = "glass p-3 rounded-2xl flex items-center gap-4 animate-fadeIn";
+                div.className = "glass p-4 rounded-2xl flex items-center gap-4 cursor-pointer";
+                div.onclick = () => { playTrack(song.previewUrl, song.trackName, song.artistName, song.artworkUrl100); };
                 div.innerHTML = `
-                    <img src="${img}" class="w-12 h-12 rounded-lg">
-                    <div class="flex-1 min-w-0">
-                        <p class="font-bold text-sm truncate">${name}</p>
-                        <p class="text-[10px] text-slate-500 truncate">${artist}</p>
-                    </div>
-                    <button onclick="playSong('${preview}')" class="bg-emerald-500/20 text-emerald-500 p-2 rounded-full text-xs">▶️</button>
+                    <img src="${song.artworkUrl60}" class="w-10 h-10 rounded-lg">
+                    <div class="flex-1 truncate text-xs"><p class="font-bold truncate">${song.trackName}</p><p class="text-slate-500 uppercase">${song.artistName}</p></div>
+                    <div class="text-sky-500">▶</div>
                 `;
                 container.appendChild(div);
             });
         }
 
-        let player = null;
-        function playSong(url) {
-            if (!url || url === "null") { alert("Keine Hörprobe verfügbar."); return; }
-            if (player) player.pause();
-            player = new Audio(url);
-            player.play();
-            openTab('tap');
+        // MIKRO
+        async function startMic() {
+            await initAudio();
+            micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            const source = audioCtx.createMediaStreamSource(micStream);
+            source.connect(analyser);
+            isMicRunning = true;
+            document.getElementById('mic-toggle').innerText = "Stopp";
+            document.getElementById('mic-toggle').classList.replace('bg-sky-500', 'bg-red-500');
         }
 
-        function resetBpm() { taps = []; updateBpm(0); }
+        function stopMic() {
+            if (micStream) micStream.getTracks().forEach(t => t.stop());
+            isMicRunning = false;
+            document.getElementById('mic-toggle').innerText = "Mikro Start";
+            document.getElementById('mic-toggle').classList.replace('bg-red-500', 'bg-sky-500');
+        }
+
+        // LISTENERS
+        document.getElementById('tap-btn').addEventListener('touchstart', (e) => { e.preventDefault(); processBeat(); });
+        document.getElementById('tap-btn').addEventListener('mousedown', (e) => { processBeat(); });
+        document.getElementById('itunes-search-btn').addEventListener('click', searchSongs);
+        document.getElementById('stop-btn').addEventListener('click', stopCurrent);
+        document.getElementById('mic-toggle').addEventListener('click', () => isMicRunning ? stopMic() : startMic());
+        document.getElementById('file-input').addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if(!file) return;
+            const url = URL.createObjectURL(file);
+            playTrack(url, file.name, "Lokale Datei");
+        });
     </script>
 </body>
 </html>
