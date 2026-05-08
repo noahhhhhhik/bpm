@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BPM Counter Pro</title>
+    <title>BPM Counter Pro V2</title>
     <link rel="manifest" href="/manifest.json">
     <meta name="theme-color" content="#0f172a">
     <script src="https://cdn.tailwindcss.com"></script>
@@ -12,12 +12,13 @@
         .active-glow { box-shadow: 0 0 20px rgba(14, 165, 233, 0.5); }
         .beat-flash { animation: flash 0.15s ease-out; }
         @keyframes flash { 0% { background-color: #1e293b; } 50% { background-color: #334155; } 100% { background-color: #1e293b; } }
+        input[type=range] { width: 100%; accent-color: #0ea5e9; }
     </style>
 </head>
 <body class="text-white flex items-center justify-center min-h-screen p-4">
 
     <div id="main-card" class="max-w-md w-full p-8 bg-slate-800 rounded-[2.5rem] shadow-2xl border border-slate-700 text-center transition-all">
-        <h1 class="text-xs font-black tracking-[0.3em] text-slate-500 mb-8 uppercase">BPM & BPS Monitor</h1>
+        <h1 class="text-xs font-black tracking-[0.3em] text-slate-500 mb-8 uppercase">BPM & BPS Monitor V2</h1>
         
         <div class="grid grid-cols-2 gap-4 mb-10">
             <div class="bg-slate-900/50 p-6 rounded-3xl">
@@ -30,9 +31,18 @@
             </div>
         </div>
 
-        <button id="tap-btn" class="w-full py-16 bg-sky-500 text-slate-900 text-4xl font-black rounded-3xl shadow-lg transition-all active:scale-95 select-none mb-6">
+        <button id="tap-btn" class="w-full py-14 bg-sky-500 text-slate-900 text-4xl font-black rounded-3xl shadow-lg transition-all active:scale-95 select-none mb-6">
             TAP
         </button>
+
+        <div class="bg-slate-900/80 p-5 rounded-2xl mb-6 text-left">
+            <label class="text-[10px] uppercase font-bold text-slate-500 block mb-2">Empfindlichkeit (Bass)</label>
+            <input type="range" id="sensitivity" min="100" max="250" value="180">
+            <div class="flex justify-between text-[10px] text-slate-600 mt-1">
+                <span>Empfindlich</span>
+                <span>Nur harter Bass</span>
+            </div>
+        </div>
 
         <div class="flex gap-2">
             <button id="mic-toggle" class="flex-1 py-4 bg-slate-700 text-white font-bold rounded-2xl transition-all hover:bg-slate-600 flex items-center justify-center gap-2">
@@ -53,7 +63,7 @@
         let analyser = null;
         let isMicRunning = false;
         let animationId = null;
-
+        
         const bpmDisplay = document.getElementById('bpm-display');
         const bpsDisplay = document.getElementById('bps-display');
         const tapBtn = document.getElementById('tap-btn');
@@ -61,13 +71,15 @@
         const micText = document.getElementById('mic-text');
         const status = document.getElementById('status');
         const mainCard = document.getElementById('main-card');
+        const sensitivitySlider = document.getElementById('sensitivity');
 
-        // BPM Logik
         function processTap() {
             const now = Date.now();
-            if (taps.length > 0 && now - taps[taps.length - 1] > 2500) taps = [];
+            // Timeout nach 2 Sekunden ohne Tap
+            if (taps.length > 0 && now - taps[taps.length - 1] > 2000) taps = [];
+            
             taps.push(now);
-            if (taps.length > 20) taps.shift();
+            if (taps.length > 15) taps.shift();
 
             if (taps.length > 1) {
                 const avgInterval = (taps[taps.length - 1] - taps[0]) / (taps.length - 1);
@@ -76,16 +88,12 @@
             }
             
             mainCard.classList.add('beat-flash');
-            setTimeout(() => mainCard.classList.remove('beat-flash'), 150);
+            setTimeout(() => mainCard.classList.remove('beat-flash'), 100);
         }
 
-        // Mikrofon Steuerung
         async function toggleMic() {
-            if (isMicRunning) {
-                stopMic();
-            } else {
-                startMic();
-            }
+            if (isMicRunning) stopMic();
+            else startMic();
         }
 
         async function startMic() {
@@ -94,8 +102,17 @@
                 audioCtx = new (window.AudioContext || window.webkitAudioContext)();
                 analyser = audioCtx.createAnalyser();
                 const source = audioCtx.createMediaStreamSource(stream);
-                source.connect(analyser);
-                analyser.fftSize = 256;
+                
+                // Low-Pass Filter hinzufügen, um hohe Töne (Stimmen, Snares) zu entfernen
+                const filter = audioCtx.createBiquadFilter();
+                filter.type = "lowpass";
+                filter.frequency.value = 150; // Nur Frequenzen unter 150Hz durchlassen (Bass)
+                
+                source.connect(filter);
+                filter.connect(analyser);
+
+                analyser.fftSize = 512;
+                analyser.smoothingTimeConstant = 0.3; // Macht die Erkennung stabiler
 
                 const dataArray = new Uint8Array(analyser.frequencyBinCount);
                 let lastBeatTime = 0;
@@ -104,15 +121,21 @@
                 micToggle.classList.replace('bg-slate-700', 'bg-red-500/20');
                 micToggle.classList.add('text-red-500', 'border', 'border-red-500/50');
                 micText.innerText = "Stoppen";
-                status.innerText = "Mikrofon hört zu...";
+                status.innerText = "Bass-Erkennung läuft...";
 
                 function detect() {
                     if (!isMicRunning) return;
                     analyser.getByteFrequencyData(dataArray);
-                    let bass = dataArray[1] + dataArray[2] + dataArray[3];
-                    if (bass > 210) { // Schwellenwert für Beats
+                    
+                    // Wir messen nur die Energie im tiefsten Bassbereich
+                    let bassEnergy = dataArray[1] + dataArray[2] + dataArray[3]; 
+                    let threshold = parseInt(sensitivitySlider.value);
+
+                    if (bassEnergy > threshold) {
                         const now = Date.now();
-                        if (now - lastBeatTime > 250) { 
+                        // "Hold-off" Zeit: Verhindert Mehrfach-Trigger bei einem einzigen Schlag
+                        // 300ms entspricht max. 200 BPM.
+                        if (now - lastBeatTime > 300) { 
                             processTap();
                             lastBeatTime = now;
                         }
@@ -121,7 +144,7 @@
                 }
                 detect();
             } catch (err) {
-                alert("Mikrofon-Zugriff verweigert.");
+                alert("Mikrofon-Fehler: " + err);
             }
         }
 
@@ -134,7 +157,7 @@
             micToggle.classList.replace('bg-red-500/20', 'bg-slate-700');
             micToggle.classList.remove('text-red-500', 'border', 'border-red-500/50');
             micText.innerText = "Mikro starten";
-            status.innerText = "Mikrofon beendet";
+            status.innerText = "Beendet.";
         }
 
         tapBtn.addEventListener('mousedown', (e) => { e.preventDefault(); processTap(); });
@@ -143,10 +166,8 @@
             taps = [];
             bpmDisplay.innerText = "0";
             bpsDisplay.innerText = "0.0";
-            status.innerText = "Reset durchgeführt";
         });
 
-        // Service Worker Registrierung für PWA
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('/sw.js');
         }
