@@ -3,174 +3,195 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BPM Counter Pro V2</title>
+    <title>BPM Studio Pro + Spotify</title>
     <link rel="manifest" href="/manifest.json">
-    <meta name="theme-color" content="#0f172a">
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        body { background-color: #0f172a; touch-action: manipulation; }
-        .active-glow { box-shadow: 0 0 20px rgba(14, 165, 233, 0.5); }
-        .beat-flash { animation: flash 0.15s ease-out; }
-        @keyframes flash { 0% { background-color: #1e293b; } 50% { background-color: #334155; } 100% { background-color: #1e293b; } }
-        input[type=range] { width: 100%; accent-color: #0ea5e9; }
+        body { background-color: #0f172a; color: white; font-family: 'Inter', sans-serif; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        .active-tab { border-bottom: 3px solid #1db954; color: #1db954; } /* Spotify Green */
+        .glass { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1); }
+        .spotify-btn { background-color: #1db954; color: black; font-weight: bold; border-radius: 9999px; transition: 0.3s; }
+        .spotify-btn:hover { background-color: #1ed760; transform: scale(1.05); }
     </style>
 </head>
-<body class="text-white flex items-center justify-center min-h-screen p-4">
+<body class="p-4 pb-20">
 
-    <div id="main-card" class="max-w-md w-full p-8 bg-slate-800 rounded-[2.5rem] shadow-2xl border border-slate-700 text-center transition-all">
-        <h1 class="text-xs font-black tracking-[0.3em] text-slate-500 mb-8 uppercase">BPM & BPS Monitor V2</h1>
-        
-        <div class="grid grid-cols-2 gap-4 mb-10">
-            <div class="bg-slate-900/50 p-6 rounded-3xl">
-                <div id="bpm-display" class="text-5xl font-bold text-sky-400">0</div>
-                <div class="text-[10px] text-slate-500 uppercase mt-2 font-bold">BPM</div>
-            </div>
-            <div class="bg-slate-900/50 p-6 rounded-3xl">
-                <div id="bps-display" class="text-5xl font-bold text-amber-400">0.0</div>
-                <div class="text-[10px] text-slate-500 uppercase mt-2 font-bold">BPS</div>
+    <div class="max-w-2xl mx-auto">
+        <!-- Header -->
+        <header class="flex justify-between items-center mb-6 pt-4">
+            <h1 class="text-xl font-black italic">BPM<span class="text-emerald-500">STUDIO</span></h1>
+            <div id="bpm-master" class="text-4xl font-mono font-bold text-emerald-400">0</div>
+        </header>
+
+        <!-- Navigation -->
+        <nav class="flex border-b border-slate-800 mb-8 overflow-x-auto text-[10px] uppercase tracking-tighter">
+            <button onclick="openTab('tap')" class="tab-link active-tab px-4 py-3 font-bold">Tap/Mic</button>
+            <button onclick="openTab('file')" class="tab-link px-4 py-3 font-bold">Datei</button>
+            <button onclick="openTab('itunes')" class="tab-link px-4 py-3 font-bold">iTunes</button>
+            <button onclick="openTab('spotify')" class="tab-link px-4 py-3 font-bold">Spotify</button>
+        </nav>
+
+        <!-- TAB 1: TAP & MIC -->
+        <div id="tap" class="tab-content active space-y-6">
+            <button id="tap-btn" class="w-full py-20 glass rounded-3xl text-6xl font-black active:scale-95 transition-all">TAP</button>
+            <div class="glass p-6 rounded-3xl">
+                <div class="flex justify-between items-center mb-4 text-xs font-bold text-slate-400">
+                    <span>BASS-ERKENNUNG</span>
+                    <button id="mic-toggle" class="bg-emerald-500 px-4 py-1 rounded-full text-slate-900">START</button>
+                </div>
+                <input type="range" id="sensitivity" min="100" max="255" value="200" class="w-full accent-emerald-500">
             </div>
         </div>
 
-        <button id="tap-btn" class="w-full py-14 bg-sky-500 text-slate-900 text-4xl font-black rounded-3xl shadow-lg transition-all active:scale-95 select-none mb-6">
-            TAP
-        </button>
+        <!-- TAB 2: FILE -->
+        <div id="file" class="tab-content">
+            <div class="glass p-10 rounded-3xl border-dashed border-2 border-slate-600 text-center">
+                <input type="file" id="file-input" accept="audio/*" class="hidden">
+                <label for="file-input" class="cursor-pointer block">
+                    <span class="text-4xl mb-4 block">📂</span>
+                    <p class="font-bold">Musikdatei analysieren</p>
+                </label>
+            </div>
+            <div id="file-status" class="mt-4 text-center text-emerald-400 font-mono text-sm"></div>
+        </div>
 
-        <div class="bg-slate-900/80 p-5 rounded-2xl mb-6 text-left">
-            <label class="text-[10px] uppercase font-bold text-slate-500 block mb-2">Empfindlichkeit (Bass)</label>
-            <input type="range" id="sensitivity" min="100" max="250" value="180">
-            <div class="flex justify-between text-[10px] text-slate-600 mt-1">
-                <span>Empfindlich</span>
-                <span>Nur harter Bass</span>
+        <!-- TAB 3: ITUNES -->
+        <div id="itunes" class="tab-content space-y-4">
+            <div class="flex gap-2">
+                <input type="text" id="itunes-query" placeholder="iTunes Suche..." class="flex-1 bg-slate-800 p-4 rounded-2xl focus:outline-none border border-slate-700">
+                <button onclick="searchITunes()" class="bg-slate-700 px-6 rounded-2xl">Go</button>
+            </div>
+            <div id="itunes-results" class="space-y-2"></div>
+        </div>
+
+        <!-- TAB 4: SPOTIFY -->
+        <div id="spotify" class="tab-content space-y-4 text-center">
+            <div id="spotify-login-section">
+                <p class="text-sm text-slate-400 mb-4">Um Spotify zu nutzen, musst du dich einmalig verbinden.</p>
+                <button onclick="loginSpotify()" class="spotify-btn px-8 py-3">Mit Spotify verbinden</button>
+            </div>
+            <div id="spotify-search-section" class="hidden space-y-4">
+                <div class="flex gap-2 text-left">
+                    <input type="text" id="spotify-query" placeholder="Spotify Song-Suche..." class="flex-1 bg-slate-800 p-4 rounded-2xl focus:outline-none border border-slate-700">
+                    <button onclick="searchSpotify()" class="spotify-btn px-6 py-2 text-sm text-slate-900">Go</button>
+                </div>
+                <div id="spotify-results" class="space-y-2 text-left"></div>
             </div>
         </div>
 
-        <div class="flex gap-2">
-            <button id="mic-toggle" class="flex-1 py-4 bg-slate-700 text-white font-bold rounded-2xl transition-all hover:bg-slate-600 flex items-center justify-center gap-2">
-                <span id="mic-icon">🎤</span> <span id="mic-text">Mikro starten</span>
-            </button>
-            <button id="reset-btn" class="px-6 py-4 bg-slate-900 text-slate-400 rounded-2xl hover:text-white transition-all">
-                ↺
-            </button>
-        </div>
-        
-        <p id="status" class="mt-4 text-xs text-slate-500 italic">Bereit zum Messen</p>
+        <button onclick="resetBpm()" class="w-full mt-10 text-[10px] text-slate-600 uppercase tracking-widest">Reset Master BPM</button>
     </div>
 
     <script>
+        // --- KONFIGURATION ---
+        const CLIENT_ID = 'DEINE_SPOTIFY_CLIENT_ID'; // <--- HIER DEINE ID EINTRAGEN
+        const REDIRECT_URI = window.location.origin + '/'; 
+
         let taps = [];
-        let audioCtx = null;
-        let stream = null;
-        let analyser = null;
-        let isMicRunning = false;
-        let animationId = null;
-        
-        const bpmDisplay = document.getElementById('bpm-display');
-        const bpsDisplay = document.getElementById('bps-display');
-        const tapBtn = document.getElementById('tap-btn');
-        const micToggle = document.getElementById('mic-toggle');
-        const micText = document.getElementById('mic-text');
-        const status = document.getElementById('status');
-        const mainCard = document.getElementById('main-card');
-        const sensitivitySlider = document.getElementById('sensitivity');
+        let globalBpm = 0;
+        let spotifyToken = null;
 
-        function processTap() {
+        // AUTH CHECK (Prüfen ob Token in URL nach Login)
+        window.onload = () => {
+            const hash = window.location.hash.substring(1).split('&').reduce((initial, item) => {
+                if (item) { var parts = item.split('='); initial[parts[0]] = decodeURIComponent(parts[1]); }
+                return initial;
+            }, {});
+            if (hash.access_token) {
+                spotifyToken = hash.access_token;
+                window.location.hash = ""; // Clean URL
+                showSpotifySearch();
+            }
+        };
+
+        function openTab(name) {
+            document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-link').forEach(l => l.classList.remove('active-tab'));
+            document.getElementById(name).classList.add('active');
+            event.currentTarget.classList.add('active-tab');
+        }
+
+        // BPM LOGIC
+        function updateBpm(val) {
+            globalBpm = val;
+            document.getElementById('bpm-master').innerText = Math.round(val);
+        }
+
+        function handleTap() {
             const now = Date.now();
-            // Timeout nach 2 Sekunden ohne Tap
-            if (taps.length > 0 && now - taps[taps.length - 1] > 2000) taps = [];
-            
+            if (taps.length > 0 && now - taps[taps.length-1] > 2000) taps = [];
             taps.push(now);
-            if (taps.length > 15) taps.shift();
-
             if (taps.length > 1) {
-                const avgInterval = (taps[taps.length - 1] - taps[0]) / (taps.length - 1);
-                bpmDisplay.innerText = Math.round(60000 / avgInterval);
-                bpsDisplay.innerText = (1000 / avgInterval).toFixed(1);
-            }
-            
-            mainCard.classList.add('beat-flash');
-            setTimeout(() => mainCard.classList.remove('beat-flash'), 100);
-        }
-
-        async function toggleMic() {
-            if (isMicRunning) stopMic();
-            else startMic();
-        }
-
-        async function startMic() {
-            try {
-                stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-                analyser = audioCtx.createAnalyser();
-                const source = audioCtx.createMediaStreamSource(stream);
-                
-                // Low-Pass Filter hinzufügen, um hohe Töne (Stimmen, Snares) zu entfernen
-                const filter = audioCtx.createBiquadFilter();
-                filter.type = "lowpass";
-                filter.frequency.value = 150; // Nur Frequenzen unter 150Hz durchlassen (Bass)
-                
-                source.connect(filter);
-                filter.connect(analyser);
-
-                analyser.fftSize = 512;
-                analyser.smoothingTimeConstant = 0.3; // Macht die Erkennung stabiler
-
-                const dataArray = new Uint8Array(analyser.frequencyBinCount);
-                let lastBeatTime = 0;
-                isMicRunning = true;
-                
-                micToggle.classList.replace('bg-slate-700', 'bg-red-500/20');
-                micToggle.classList.add('text-red-500', 'border', 'border-red-500/50');
-                micText.innerText = "Stoppen";
-                status.innerText = "Bass-Erkennung läuft...";
-
-                function detect() {
-                    if (!isMicRunning) return;
-                    analyser.getByteFrequencyData(dataArray);
-                    
-                    // Wir messen nur die Energie im tiefsten Bassbereich
-                    let bassEnergy = dataArray[1] + dataArray[2] + dataArray[3]; 
-                    let threshold = parseInt(sensitivitySlider.value);
-
-                    if (bassEnergy > threshold) {
-                        const now = Date.now();
-                        // "Hold-off" Zeit: Verhindert Mehrfach-Trigger bei einem einzigen Schlag
-                        // 300ms entspricht max. 200 BPM.
-                        if (now - lastBeatTime > 300) { 
-                            processTap();
-                            lastBeatTime = now;
-                        }
-                    }
-                    animationId = requestAnimationFrame(detect);
-                }
-                detect();
-            } catch (err) {
-                alert("Mikrofon-Fehler: " + err);
+                const avg = (taps[taps.length-1] - taps[0]) / (taps.length-1);
+                updateBpm(60000 / avg);
             }
         }
+        document.getElementById('tap-btn').addEventListener('mousedown', (e) => { e.preventDefault(); handleTap(); });
 
-        function stopMic() {
-            isMicRunning = false;
-            cancelAnimationFrame(animationId);
-            if (stream) stream.getTracks().forEach(track => track.stop());
-            if (audioCtx) audioCtx.close();
-            
-            micToggle.classList.replace('bg-red-500/20', 'bg-slate-700');
-            micToggle.classList.remove('text-red-500', 'border', 'border-red-500/50');
-            micText.innerText = "Mikro starten";
-            status.innerText = "Beendet.";
+        // SPOTIFY LOGIC
+        function loginSpotify() {
+            const scope = 'user-read-private user-read-email';
+            const url = `https://accounts.spotify.com/authorize?client_id=${CLIENT_ID}&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&scope=${encodeURIComponent(scope)}&response_type=token&show_dialog=true`;
+            window.location.href = url;
         }
 
-        tapBtn.addEventListener('mousedown', (e) => { e.preventDefault(); processTap(); });
-        micToggle.addEventListener('click', toggleMic);
-        document.getElementById('reset-btn').addEventListener('click', () => {
-            taps = [];
-            bpmDisplay.innerText = "0";
-            bpsDisplay.innerText = "0.0";
-        });
-
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('/sw.js');
+        function showSpotifySearch() {
+            document.getElementById('spotify-login-section').classList.add('hidden');
+            document.getElementById('spotify-search-section').classList.remove('hidden');
         }
+
+        async function searchSpotify() {
+            const q = document.getElementById('spotify-query').value;
+            const res = await fetch(`https://api.spotify.com/v1/search?q=${encodeURIComponent(q)}&type=track&limit=10`, {
+                headers: { 'Authorization': 'Bearer ' + spotifyToken }
+            });
+            const data = await res.json();
+            renderResults('spotify-results', data.tracks.items, 'spotify');
+        }
+
+        // ITUNES LOGIC
+        async function searchITunes() {
+            const q = document.getElementById('itunes-query').value;
+            const res = await fetch(`https://itunes.apple.com/search?term=${encodeURIComponent(q)}&entity=song&limit=10`);
+            const data = await res.json();
+            renderResults('itunes-results', data.results, 'itunes');
+        }
+
+        function renderResults(targetId, tracks, type) {
+            const container = document.getElementById(targetId);
+            container.innerHTML = "";
+            tracks.forEach(t => {
+                const name = t.name || t.trackName;
+                const artist = (t.artists ? t.artists[0].name : t.artistName);
+                const img = (t.album ? t.album.images[2].url : t.artworkUrl60);
+                const preview = t.preview_url || t.previewUrl;
+
+                const div = document.createElement('div');
+                div.className = "glass p-3 rounded-2xl flex items-center gap-4 animate-fadeIn";
+                div.innerHTML = `
+                    <img src="${img}" class="w-12 h-12 rounded-lg">
+                    <div class="flex-1 min-w-0">
+                        <p class="font-bold text-sm truncate">${name}</p>
+                        <p class="text-[10px] text-slate-500 truncate">${artist}</p>
+                    </div>
+                    <button onclick="playSong('${preview}')" class="bg-emerald-500/20 text-emerald-500 p-2 rounded-full text-xs">▶️</button>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        let player = null;
+        function playSong(url) {
+            if (!url || url === "null") { alert("Keine Hörprobe verfügbar."); return; }
+            if (player) player.pause();
+            player = new Audio(url);
+            player.play();
+            openTab('tap');
+        }
+
+        function resetBpm() { taps = []; updateBpm(0); }
     </script>
 </body>
 </html>
